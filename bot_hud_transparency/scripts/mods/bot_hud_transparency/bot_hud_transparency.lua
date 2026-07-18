@@ -6,17 +6,17 @@ local PlayerCompositions = require("scripts/utilities/players/player_composition
 
 local function is_player_completely_dead(player)
     if not player then return true end
-    
+
     local unit = player.player_unit
     if not unit or not ALIVE[unit] then
         return true
     end
-    
+
     local health_extension = ScriptUnit.has_extension(unit, "health_system")
     if health_extension and not health_extension:is_alive() then
         return true
     end
-    
+
     local unit_data_extension = ScriptUnit.has_extension(unit, "unit_data_system")
     if unit_data_extension then
         local character_state = unit_data_extension:read_component("character_state")
@@ -24,18 +24,18 @@ local function is_player_completely_dead(player)
             return true
         end
     end
-    
+
     return false
 end
 
 local function is_player_hogtied(player)
     if not player then return false end
-    
+
     local unit = player.player_unit
     if not unit or not ALIVE[unit] then
         return false
     end
-    
+
     local unit_data_extension = ScriptUnit.has_extension(unit, "unit_data_system")
     if unit_data_extension then
         local character_state = unit_data_extension:read_component("character_state")
@@ -43,28 +43,24 @@ local function is_player_hogtied(player)
             return true
         end
     end
-    
+
     return false
 end
 
--- Hook into the Team Player Panel update to apply transparency for bots
 mod:hook_safe("HudElementTeamPlayerPanel", "update", function(self)
     local player = self._data and self._data.player
     if player then
-        -- We check if the player is human controlled. If not, it's a bot.
         local is_bot = not player:is_human_controlled()
-        
+
         local alpha = 1
         if is_bot then
             alpha = mod:get("bot_hud_transparency") / 100
         end
-        
-        -- Apply the alpha to all widgets in the panel
+
         for _, widget in ipairs(self._widgets) do
             widget.alpha_multiplier = alpha
         end
-        
-        -- Health bar segments are stored in a separate array, apply alpha to them as well
+
         if self._health_bar_segment_widgets then
             for _, widget in ipairs(self._health_bar_segment_widgets) do
                 widget.alpha_multiplier = alpha
@@ -137,7 +133,7 @@ mod:hook("HudElementTeamPanelHandler", "_player_scan", function(func, self, ui_r
 
             local unique_id = temp_new_unique_ids[i]
             local player = PlayerCompositions.player_from_unique_id(player_composition_name, unique_id)
-            
+
             local is_bot = player and not player:is_human_controlled()
             local should_hide = false
             if is_bot then
@@ -176,19 +172,16 @@ mod:hook("HudElementTeamPanelHandler", "_player_scan", function(func, self, ui_r
     end
 end)
 
--- Hook into World Markers update to apply transparency for bot nameplates
 mod:hook_safe("HudElementWorldMarkers", "update", function(self)
     local bot_nametag_alpha = mod:get("bot_nametag_transparency") / 100
     local hide_dead = mod:get("hide_dead_bot_hud")
     local always_hide = mod:get("always_hide_bot_hud")
-    
+
     for _, marker in ipairs(self._markers) do
         local data = marker.data
-        -- For nameplates, marker.data is the player object.
-        -- We check if it has the is_human_controlled method to ensure it's a player.
         if data and type(data) == "table" and data.is_human_controlled then
             local is_bot = not data:is_human_controlled()
-            
+
             local alpha = 1
             if is_bot then
                 if always_hide then
@@ -199,13 +192,12 @@ mod:hook_safe("HudElementWorldMarkers", "update", function(self)
                     alpha = bot_nametag_alpha
                 end
             end
-            
+
             if marker.widget then
                 marker.widget.alpha_multiplier = alpha
             end
         end
 
-        -- Rescue/assistance markers logic for bots
         if mod:get("hide_bot_rescue_markers") then
             local template_name = marker.template and marker.template.name
             if template_name == "player_assistance" or marker.markers_aio_type == "player_assistance" or marker.type == "player_assistance" then
@@ -215,7 +207,6 @@ mod:hook_safe("HudElementWorldMarkers", "update", function(self)
                     if player_manager then
                         local player = player_manager:player_by_unit(unit)
                         if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
-                            -- It's a bot's rescue marker. Hide it.
                             if marker.widget then
                                 marker.widget.alpha_multiplier = 0
                             end
@@ -228,7 +219,6 @@ mod:hook_safe("HudElementWorldMarkers", "update", function(self)
     end
 end)
 
--- Mute bot voices when they are hogtied
 mod:hook(DialogueExtension, "play_event", function(func, self, event)
     if mod:get("mute_hogtied_bots") then
         local unit = self._unit or self.unit
@@ -238,7 +228,7 @@ mod:hook(DialogueExtension, "play_event", function(func, self, event)
                 local player = player_manager:player_by_unit(unit)
                 if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
                     if is_player_hogtied(player) then
-                        return -- Mute bot voice
+                        return
                     end
                 end
             end
@@ -247,7 +237,6 @@ mod:hook(DialogueExtension, "play_event", function(func, self, event)
     return func(self, event)
 end)
 
--- Mute bot subtitles when they are hogtied
 mod:hook(DialogueSystemSubtitle, "add_playing_localized_dialogue", function(func, self, speaker_name, dialogue)
     if mod:get("mute_hogtied_bots") then
         if dialogue and dialogue.currently_playing_unit then
@@ -256,7 +245,7 @@ mod:hook(DialogueSystemSubtitle, "add_playing_localized_dialogue", function(func
                 local player = player_manager:player_by_unit(dialogue.currently_playing_unit)
                 if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
                     if is_player_hogtied(player) then
-                        return -- Mute bot subtitle
+                        return
                     end
                 end
             end
