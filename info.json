@@ -1,0 +1,14 @@
+{
+    "name": "Transparent Bot Hud",
+    "author": "IndicaBunny",
+    "version": "2.1",
+    "source": "https://github.com/MaddyMarv/Transparent-Bot-Hud",
+    "kofi": "https://ko-fi.com/indicabunny",
+    "description": "Lets you adjust the transparency of the bot HUD or hide them completely.",
+    "order": {
+        "require": [],
+        "this_before": [],
+        "this_after": []
+    },
+    "localization": {}
+}
