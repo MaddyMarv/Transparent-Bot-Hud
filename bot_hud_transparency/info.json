@@ -8,10 +8,11 @@
         "kofi": "https://ko-fi.com/indicabunny"
     },
     "description": "Lets you adjust the transparency of the bot HUD or hide them completely.",
-    "order": {
-        "require": [],
-        "this_before": [],
-        "this_after": []
+    "dependencies": {
+        "required": [],
+        "optional": [],
+        "self_before": [],
+        "self_after": []
     },
     "localization": {}
 }
