@@ -1,4 +1,4 @@
-Standalone mod that lets you change the transparency of bot health bars and name tags.
+Adjust opacity or hide bot health bars, nameplates, and voice lines.
 
 [b]Options:[/b]
 - Bot Team Panel Opacity

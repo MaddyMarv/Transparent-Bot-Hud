@@ -1,7 +1,7 @@
 ### [Transparent Bot HUD](https://www.nexusmods.com/warhammer40kdarktide/mods/990)
 <img width="1417" height="663" alt="image" src="https://github.com/user-attachments/assets/5b999564-1aae-49eb-bed8-66cf5aeafb24" />
 
-Standalone mod that lets you change the transparency of bot health bars and name tags.
+Adjust opacity or hide bot health bars, nameplates, and voice lines.
 
 **Options:**
 - Bot Team Panel Opacity
