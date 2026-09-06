@@ -8,4 +8,5 @@ Standalone mod that lets you change the transparency of bot health bars and name
 - Mute Hogtied Bots
 - Hide Bot Rescue Markers
 
-[b]Links:[/b] [url=https://github.com/MaddyMarv/Transparent-Bot-Hud]Source Code[/url] | [url=https://www.nexusmods.com/profile/indicabunny]Nexus Mods Profile[/url] | [url=https://ko-fi.com/indicabunny]Support Me on Ko-fi[/url]
+[b]Links:[/b]
+[url=https://github.com/MaddyMarv/Transparent-Bot-Hud]Source Code[/url] | [url=https://www.nexusmods.com/profile/indicabunny]Nexus Mods Profile[/url] | [url=https://ko-fi.com/indicabunny]Support Me on Ko-fi[/url]
