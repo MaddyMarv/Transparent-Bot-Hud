@@ -1,4 +1,4 @@
-Adjust opacity or hide bot health bars, nameplates, and voice lines.
+Adjust opacity or hide bot HUD panels and nametags.
 
 [b]Options:[/b]
 - Bot Team Panel Opacity

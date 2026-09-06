@@ -7,7 +7,7 @@
     "funding": {
         "kofi": "https://ko-fi.com/indicabunny"
     },
-    "description": "Adjust opacity or hide bot health bars, nameplates, and voice lines.",
+    "description": "Adjust opacity or hide bot HUD panels and nametags.",
     "dependencies": {
         "required": [],
         "self_after": [],

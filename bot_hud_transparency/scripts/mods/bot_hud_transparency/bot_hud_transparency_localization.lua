@@ -3,7 +3,7 @@ local locales = {
 		en = "Bot HUD Transparency",
 	},
 	mod_description = {
-		en = "Adjust opacity or hide bot health bars, nameplates, and voice lines.",
+		en = "Adjust opacity or hide bot HUD panels and nametags.",
 	},
 	bot_hud_transparency = {
 		en = "Bot Team Panel Opacity",
