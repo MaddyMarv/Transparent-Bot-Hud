@@ -17,8 +17,11 @@ local locales = {
 	always_hide_bot_hud = {
 		en = "Always Hide Bot HUD",
 	},
-	mute_hogtied_bots = {
-		en = "Mute Hogtied Bots",
+	mute_downed_bots = {
+		en = "Mute Bot Downed Audio",
+	},
+	mute_bot_death_sound = {
+		en = "Mute Bot Death Audio",
 	},
 	hide_bot_rescue_markers = {
 		en = "Hide Bot Rescue Markers",

@@ -29,7 +29,12 @@ return {
 				default_value = false,
 			},
 			{
-				setting_id = "mute_hogtied_bots",
+				setting_id = "mute_downed_bots",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = "mute_bot_death_sound",
 				type = "checkbox",
 				default_value = true,
 			},

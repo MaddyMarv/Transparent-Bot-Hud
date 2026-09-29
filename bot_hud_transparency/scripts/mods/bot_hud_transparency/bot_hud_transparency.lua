@@ -1,7 +1,5 @@
 local mod = get_mod("bot_hud_transparency")
 
-local DialogueExtension = require("scripts/extension_systems/dialogue/dialogue_extension")
-local DialogueSystemSubtitle = require("scripts/extension_systems/dialogue/dialogue_system_subtitle")
 local PlayerCompositions = require("scripts/utilities/players/player_compositions")
 
 local function is_player_completely_dead(player)
@@ -42,6 +40,108 @@ local function is_player_hogtied(player)
         if character_state and character_state.state_name == "hogtied" then
             return true
         end
+    end
+
+    return false
+end
+
+local DOWNED_STATES = {
+    knocked_down = true,
+    ledge_hanging = true,
+    netted = true,
+    pounced = true,
+    mutant_charged = true,
+    grabbed = true,
+    consumed = true,
+    catapulted = true,
+    warp_grabbed = true,
+    vortex_grabbed = true,
+}
+
+local BOT_DEATH_SOUNDS = {
+    ["wwise/events/player/play_teammate_died"] = true,
+}
+
+local BOT_DOWNED_SOUNDS = {
+    ["wwise/events/player/play_teammate_knocked_down"] = true,
+    ["wwise/events/player/play_hud_player_hanging_stinger"] = true,
+    ["wwise/events/player/play_hud_player_states_mutant_charger_downed"] = true,
+    ["wwise/events/player/play_hud_player_states_netgunner_downed"] = true,
+    ["wwise/events/player/play_hud_player_states_chaos_hound_downed"] = true,
+    ["wwise/events/player/play_player_combat_experience_catapulted"] = true,
+    ["wwise/events/player/play_player_vortex_grabbed_enter"] = true,
+    ["wwise/events/player/play_enemy_daemonhost_grab_stinger"] = true,
+}
+
+local function is_player_dead(player)
+    if not player then return true end
+
+    local unit = player.player_unit
+    if not unit or not ALIVE[unit] then
+        return true
+    end
+
+    local health_extension = ScriptUnit.has_extension(unit, "health_system")
+    if health_extension and not health_extension:is_alive() then
+        return true
+    end
+
+    local unit_data_extension = ScriptUnit.has_extension(unit, "unit_data_system")
+    if unit_data_extension then
+        local character_state = unit_data_extension:read_component("character_state")
+        if character_state and character_state.state_name == "dead" then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function is_player_downed(player)
+    if not player then return false end
+
+    local unit = player.player_unit
+    if not unit or not ALIVE[unit] then
+        return false
+    end
+
+    local unit_data_extension = ScriptUnit.has_extension(unit, "unit_data_system")
+    if unit_data_extension then
+        local character_state = unit_data_extension:read_component("character_state")
+        if character_state and DOWNED_STATES[character_state.state_name] then
+            return true
+        end
+
+        local disabled_state = unit_data_extension:read_component("disabled_character_state")
+        if disabled_state and disabled_state.is_disabled then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function is_bot_death_sound(event_name)
+    if not event_name then return false end
+    return BOT_DEATH_SOUNDS[event_name] or string.find(event_name, "play_teammate_died") ~= nil
+end
+
+local function is_bot_downed_sound(event_name)
+    if not event_name then return false end
+    return BOT_DOWNED_SOUNDS[event_name] or string.find(event_name, "play_teammate_knocked_down") ~= nil
+end
+
+local function should_mute_bot_dialogue(player)
+    if not player or (type(player.is_human_controlled) == "function" and player:is_human_controlled()) then
+        return false
+    end
+
+    if mod:get("mute_downed_bots") and (is_player_downed(player) or is_player_hogtied(player)) then
+        return true
+    end
+
+    if mod:get("mute_bot_death_sound") and is_player_dead(player) then
+        return true
     end
 
     return false
@@ -219,37 +319,129 @@ mod:hook_safe("HudElementWorldMarkers", "update", function(self)
     end
 end)
 
-mod:hook(DialogueExtension, "play_event", function(func, self, event)
-    if mod:get("mute_hogtied_bots") then
-        local unit = self._unit or self.unit
-        if unit then
-            local player_manager = Managers.player
-            if player_manager then
-                local player = player_manager:player_by_unit(unit)
-                if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
-                    if is_player_hogtied(player) then
-                        return
-                    end
-                end
+mod:hook("DialogueExtension", "play_event", function(func, self, event)
+    local unit = self._unit or self.unit
+    if unit then
+        local player_manager = Managers.player
+        if player_manager then
+            local player = player_manager:player_by_unit(unit)
+            if should_mute_bot_dialogue(player) then
+                return
             end
         end
     end
     return func(self, event)
 end)
 
-mod:hook(DialogueSystemSubtitle, "add_playing_localized_dialogue", function(func, self, speaker_name, dialogue)
-    if mod:get("mute_hogtied_bots") then
-        if dialogue and dialogue.currently_playing_unit then
-            local player_manager = Managers.player
-            if player_manager then
-                local player = player_manager:player_by_unit(dialogue.currently_playing_unit)
-                if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
-                    if is_player_hogtied(player) then
-                        return
-                    end
-                end
+mod:hook("DialogueSystemSubtitle", "add_playing_localized_dialogue", function(func, self, speaker_name, dialogue)
+    if dialogue and dialogue.currently_playing_unit then
+        local player_manager = Managers.player
+        if player_manager then
+            local player = player_manager:player_by_unit(dialogue.currently_playing_unit)
+            if should_mute_bot_dialogue(player) then
+                return
             end
         end
     end
     return func(self, speaker_name, dialogue)
+end)
+
+mod:hook("PlayerUnitFxExtension", "rpc_play_player_sound", function(func, self, channel_id, game_object_id, event_id, source_id, attachment_id, append_husk_to_event_name)
+    local player = self._player
+    if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
+        local sound_lookup = NetworkLookup and NetworkLookup.player_character_sounds
+        local event_name = sound_lookup and sound_lookup[event_id]
+        if event_name then
+            if mod:get("mute_bot_death_sound") and is_bot_death_sound(event_name) then
+                return
+            end
+            if mod:get("mute_downed_bots") and is_bot_downed_sound(event_name) then
+                return
+            end
+            if mod:get("mute_downed_bots") and (is_player_downed(player) or is_player_hogtied(player)) and string.find(event_name, "_vce_") then
+                return
+            end
+        end
+    end
+    return func(self, channel_id, game_object_id, event_id, source_id, attachment_id, append_husk_to_event_name)
+end)
+
+mod:hook("PlayerUnitFxExtension", "rpc_play_player_sound_with_position", function(func, self, channel_id, game_object_id, event_id, sound_position, append_husk_to_event_name)
+    local player = self._player
+    if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
+        local sound_lookup = NetworkLookup and NetworkLookup.player_character_sounds
+        local event_name = sound_lookup and sound_lookup[event_id]
+        if event_name then
+            if mod:get("mute_bot_death_sound") and is_bot_death_sound(event_name) then
+                return
+            end
+            if mod:get("mute_downed_bots") and is_bot_downed_sound(event_name) then
+                return
+            end
+            if mod:get("mute_downed_bots") and (is_player_downed(player) or is_player_hogtied(player)) and string.find(event_name, "_vce_") then
+                return
+            end
+        end
+    end
+    return func(self, channel_id, game_object_id, event_id, sound_position, append_husk_to_event_name)
+end)
+
+mod:hook("PlayerUnitFxExtension", "trigger_gear_wwise_event_with_source", function(func, self, sound_alias, external_properties, source_name, sync_to_clients, include_client, optional_attachment_name)
+    local player = self._player
+    if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
+        if sound_alias == "disabled_enter" and external_properties then
+            local stinger_type = external_properties.stinger_type
+            if stinger_type == "teammate_died" then
+                if mod:get("mute_bot_death_sound") then
+                    return
+                end
+            elseif mod:get("mute_downed_bots") then
+                return
+            end
+        end
+    end
+    return func(self, sound_alias, external_properties, source_name, sync_to_clients, include_client, optional_attachment_name)
+end)
+
+mod:hook("PlayerUnitFxExtension", "trigger_gear_wwise_event_with_position", function(func, self, sound_alias, external_properties, sound_position, sync_to_clients, include_client)
+    local player = self._player
+    if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
+        if sound_alias == "disabled_enter" and external_properties then
+            local stinger_type = external_properties.stinger_type
+            if stinger_type == "teammate_died" then
+                if mod:get("mute_bot_death_sound") then
+                    return
+                end
+            elseif mod:get("mute_downed_bots") then
+                return
+            end
+        end
+    end
+    return func(self, sound_alias, external_properties, sound_position, sync_to_clients, include_client)
+end)
+
+mod:hook("PlayerUnitFxExtension", "trigger_voice_wwise_event_with_source", function(func, self, event_name, source_name, append_husk_to_event_name, include_client)
+    local player = self._player
+    if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
+        if mod:get("mute_downed_bots") and (is_player_downed(player) or is_player_hogtied(player)) then
+            return
+        end
+        if mod:get("mute_bot_death_sound") and is_player_dead(player) then
+            return
+        end
+    end
+    return func(self, event_name, source_name, append_husk_to_event_name, include_client)
+end)
+
+mod:hook("PlayerUnitFxExtension", "trigger_wwise_event_non_synced", function(func, self, dialogue_extension, event_name, source_name, append_husk_to_event_name, optional_attachment_name)
+    local player = self._player
+    if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
+        if mod:get("mute_downed_bots") and (is_player_downed(player) or is_player_hogtied(player)) then
+            return
+        end
+        if mod:get("mute_bot_death_sound") and is_player_dead(player) then
+            return
+        end
+    end
+    return func(self, dialogue_extension, event_name, source_name, append_husk_to_event_name, optional_attachment_name)
 end)
