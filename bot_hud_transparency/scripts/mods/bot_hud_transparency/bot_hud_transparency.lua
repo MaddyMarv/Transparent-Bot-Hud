@@ -2,6 +2,18 @@ local mod = get_mod("bot_hud_transparency")
 
 local PlayerCompositions = require("scripts/utilities/players/player_compositions")
 
+local function is_valid_player(player)
+	if not player or type(player) ~= "table" or rawget(player, "__deleted") then
+		return false
+	end
+
+	local success, player_type = pcall(function()
+		return player.type and player:type()
+	end)
+
+	return success and (player_type == "HumanPlayer" or player_type == "BotPlayer" or player_type == "RemotePlayer")
+end
+
 local function is_player_completely_dead(player)
     if not player then return true end
 
@@ -278,23 +290,28 @@ mod:hook_safe("HudElementWorldMarkers", "update", function(self)
     local always_hide = mod:get("always_hide_bot_hud")
 
     for _, marker in ipairs(self._markers) do
-        local data = marker.data
-        if data and type(data) == "table" and data.is_human_controlled then
-            local is_bot = not data:is_human_controlled()
+        local template_name = marker.template and marker.template.name or marker.type
+        local is_nameplate = template_name == "nameplate" or template_name == "nameplate_party" or template_name == "nameplate_party_hud"
 
-            local alpha = 1
-            if is_bot then
-                if always_hide then
-                    alpha = 0
-                elseif hide_dead and is_player_completely_dead(data) then
-                    alpha = 0
-                else
-                    alpha = bot_nametag_alpha
+        if is_nameplate then
+            local data = marker.data
+            if is_valid_player(data) then
+                local is_bot = not data:is_human_controlled()
+
+                local alpha = 1
+                if is_bot then
+                    if always_hide then
+                        alpha = 0
+                    elseif hide_dead and is_player_completely_dead(data) then
+                        alpha = 0
+                    else
+                        alpha = bot_nametag_alpha
+                    end
                 end
-            end
 
-            if marker.widget then
-                marker.widget.alpha_multiplier = alpha
+                if marker.widget then
+                    marker.widget.alpha_multiplier = alpha
+                end
             end
         end
 
@@ -302,11 +319,11 @@ mod:hook_safe("HudElementWorldMarkers", "update", function(self)
             local template_name = marker.template and marker.template.name
             if template_name == "player_assistance" or marker.markers_aio_type == "player_assistance" or marker.type == "player_assistance" then
                 local unit = marker.unit
-                if unit and type(unit) == "userdata" and Unit.alive(unit) then
+                if unit and ALIVE[unit] then
                     local player_manager = Managers.player
                     if player_manager then
                         local player = player_manager:player_by_unit(unit)
-                        if player and type(player.is_human_controlled) == "function" and not player:is_human_controlled() then
+                        if is_valid_player(player) and not player:is_human_controlled() then
                             if marker.widget then
                                 marker.widget.alpha_multiplier = 0
                             end
