@@ -1,11 +1,14 @@
 Adjust opacity or hide bot HUD panels and nametags.
 
 [b]Options:[/b]
+
+[b]General[/b]
 - Bot Team Panel Opacity
 - Bot Name Tag Opacity
 - Hide Dead / Hogtied Bots
 - Always Hide Bot HUD
 - Mute Hogtied Bots
+- Mute Bot Death Audio
 - Hide Bot Rescue Markers
 
 [b]Links:[/b]
