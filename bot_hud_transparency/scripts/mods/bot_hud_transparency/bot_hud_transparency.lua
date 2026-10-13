@@ -176,6 +176,7 @@ mod:hook("HudElementTeamPanelHandler", "_player_scan", function(func, self, ui_r
     local player_composition_name = self._player_composition_name
     local players = PlayerCompositions.players(player_composition_name, temp_team_players)
     local player_panel_by_unique_id = self._player_panel_by_unique_id
+    if not player_panel_by_unique_id then return end
     local player_panels_array = self._player_panels_array
     local num_composition_players = 0
 
