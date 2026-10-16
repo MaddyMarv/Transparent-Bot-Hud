@@ -149,7 +149,7 @@ end
 
 mod:hook_safe("HudElementTeamPlayerPanel", "update", function(self)
     local player = self._data and self._data.player
-    if player then
+    if player and type(player.is_human_controlled) == "function" then
         local is_bot = not player:is_human_controlled()
 
         local alpha = 1
@@ -198,7 +198,7 @@ mod:hook("HudElementTeamPanelHandler", "_player_scan", function(func, self, ui_r
         local player = data.player
         local player_deleted = player.__deleted
 
-        local is_bot = player and not player_deleted and not player:is_human_controlled()
+        local is_bot = player and not player_deleted and type(player.is_human_controlled) == "function" and not player:is_human_controlled()
         local should_hide = false
         if is_bot then
             if mod:get("always_hide_bot_hud") then
@@ -235,7 +235,7 @@ mod:hook("HudElementTeamPanelHandler", "_player_scan", function(func, self, ui_r
             local unique_id = temp_new_unique_ids[i]
             local player = PlayerCompositions.player_from_unique_id(player_composition_name, unique_id)
 
-            local is_bot = player and not player:is_human_controlled()
+            local is_bot = player and type(player.is_human_controlled) == "function" and not player:is_human_controlled()
             local should_hide = false
             if is_bot then
                 if mod:get("always_hide_bot_hud") then
@@ -279,23 +279,30 @@ mod:hook_safe("HudElementWorldMarkers", "update", function(self)
     local always_hide = mod:get("always_hide_bot_hud")
 
     for _, marker in ipairs(self._markers) do
-        local data = marker.data
-        if data and type(data) == "table" and data.is_human_controlled then
-            local is_bot = not data:is_human_controlled()
+        local template_name = marker.template and marker.template.name
+        if template_name and string.find(template_name, "nameplate") then
+            local player = marker.data
+            local ok, is_human = pcall(function()
+                return player and type(player.is_human_controlled) == "function" and player:is_human_controlled()
+            end)
 
-            local alpha = 1
-            if is_bot then
-                if always_hide then
-                    alpha = 0
-                elseif hide_dead and is_player_completely_dead(data) then
-                    alpha = 0
-                else
-                    alpha = bot_nametag_alpha
+            if ok and is_human ~= nil then
+                local is_bot = not is_human
+                local alpha = 1
+
+                if is_bot then
+                    if always_hide then
+                        alpha = 0
+                    elseif hide_dead and is_player_completely_dead(player) then
+                        alpha = 0
+                    else
+                        alpha = bot_nametag_alpha
+                    end
                 end
-            end
 
-            if marker.widget then
-                marker.widget.alpha_multiplier = alpha
+                if marker.widget then
+                    marker.widget.alpha_multiplier = alpha
+                end
             end
         end
 
